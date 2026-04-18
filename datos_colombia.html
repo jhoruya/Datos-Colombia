@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colombia Open Data Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #F0D98C;
+    --gold-dark: #8B6914;
+    --navy: #0D1B2A;
+    --navy-mid: #1A2E45;
+    --navy-soft: #243B55;
+    --cream: #FAF7F0;
+    --cream-dark: #EDE8DC;
+    --red-col: #CE1126;
+    --blue-col: #003087;
+    --yellow-col: #FCD116;
+    --text-dark: #1A1A2E;
+    --text-mid: #4A4A6A;
+    --text-light: #8888AA;
+    --success: #2D8A5E;
+    --warning: #C97B22;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: #E8EAF0;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+    border-bottom: 1px solid rgba(201,168,76,0.25);
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .flag-strip {
+    width: 6px; height: 36px; border-radius: 2px;
+    background: linear-gradient(to bottom, var(--yellow-col) 33%, var(--blue-col) 33%, var(--blue-col) 66%, var(--red-col) 66%);
+  }
+  .logo-text h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    color: var(--gold);
+    letter-spacing: 0.03em;
+  }
+  .logo-text p { font-size: 0.72rem; color: var(--text-light); letter-spacing: 0.08em; text-transform: uppercase; }
+  .nav-tabs {
+    display: flex; gap: 4px;
+  }
+  .nav-tab {
+    background: transparent;
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text-light);
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-tab:hover, .nav-tab.active {
+    background: rgba(201,168,76,0.12);
+    border-color: var(--gold);
+    color: var(--gold-light);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(160deg, var(--navy-mid) 0%, var(--navy-soft) 60%, #1B2F4A 100%);
+    padding: 4rem 2rem 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(201,168,76,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.35);
+    color: var(--gold-light);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 1.25rem;
+  }
+  .hero h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    color: #EEF0F8;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+  }
+  .hero h2 span { color: var(--gold); }
+  .hero p {
+    font-size: 0.95rem;
+    color: var(--text-light);
+    max-width: 520px;
+    margin: 0 auto 2rem;
+    line-height: 1.7;
+  }
+  .api-tags { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .api-tag {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    color: var(--text-light);
+    font-family: monospace;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    padding: 3rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: none;
+  }
+  .section.active { display: block; }
+
+  .section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    color: #EEF0F8;
+    margin-bottom: 0.5rem;
+  }
+  .section-desc { font-size: 0.88rem; color: var(--text-light); margin-bottom: 2rem; line-height: 1.6; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--navy-mid);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card-title {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--gold-light);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.04em;
+  }
+  .card h3 { font-size: 1.05rem; color: #EEF0F8; margin-bottom: 0.5rem; }
+
+  /* ── CLIMA (REST API) ── */
+  .city-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.75rem;
+  }
+  .city-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 10px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: var(--text-light);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.83rem;
+  }
+  .city-btn:hover, .city-btn.active {
+    background: rgba(201,168,76,0.1);
+    border-color: var(--gold);
+    color: var(--gold-light);
+  }
+  .city-btn .city-name { font-weight: 500; display: block; margin-top: 2px; }
+  .city-btn .city-emoji { font-size: 1.3rem; }
+
+  .weather-display {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 1.75rem;
+  }
+  @media (max-width: 600px) { .weather-display { grid-template-columns: 1fr; } }
+
+  .weather-main {
+    background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04));
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .weather-icon { font-size: 3.5rem; margin-bottom: 0.25rem; }
+  .weather-temp { font-family: 'Playfair Display', serif; font-size: 3rem; color: var(--gold-light); }
+  .weather-temp span { font-size: 1.1rem; color: var(--text-light); }
+  .weather-desc { font-size: 0.85rem; color: var(--text-light); margin-top: 4px; }
+  .weather-city { font-size: 1rem; font-weight: 500; color: #EEF0F8; margin-bottom: 4px; }
+
+  .weather-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-content: start;
+  }
+  .stat-tile {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .stat-tile .label { font-size: 0.7rem; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-tile .value { font-size: 1.25rem; font-weight: 500; color: #EEF0F8; }
+  .stat-tile .unit { font-size: 0.7rem; color: var(--text-light); }
+
+  .chart-wrap { position: relative; width: 100%; height: 220px; }
+  .chart-legend { display: flex; gap: 16px; margin-bottom: 8px; font-size: 0.75rem; color: var(--text-light); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+  /* ── API ENDPOINT INFO ── */
+  .endpoint-box {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 1.5rem;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    word-break: break-all;
+  }
+  .endpoint-box .method {
+    display: inline-block;
+    background: rgba(45,138,94,0.2);
+    color: #5FD4A4;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    margin-right: 8px;
+  }
+  .endpoint-box .url { color: var(--gold-light); }
+
+  /* ── SODA / DATOS GOV ── */
+  .filter-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    align-items: flex-end;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .filter-group label { font-size: 0.72rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.07em; }
+  .filter-group select, .filter-group input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    color: #E8EAF0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    min-width: 160px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .filter-group select:focus, .filter-group input:focus { border-color: var(--gold); }
+  .filter-group select option { background: var(--navy-mid); }
+
+  .btn-primary {
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    border-radius: 6px;
+    padding: 9px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: flex-end;
+  }
+  .btn-primary:hover { background: var(--gold-light); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .data-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead { background: rgba(201,168,76,0.1); }
+  th { padding: 10px 14px; text-align: left; font-weight: 500; color: var(--gold-light); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+  td { padding: 9px 14px; border-top: 1px solid rgba(255,255,255,0.05); color: #C8CAD8; vertical-align: top; }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+
+  .badge {
+    display: inline-block; border-radius: 4px; padding: 2px 8px;
+    font-size: 0.7rem; font-weight: 500;
+  }
+  .badge-green { background: rgba(45,138,94,0.2); color: #7DDBB0; }
+  .badge-red { background: rgba(206,17,38,0.2); color: #F08090; }
+  .badge-yellow { background: rgba(201,168,76,0.2); color: var(--gold-light); }
+  .badge-blue { background: rgba(0,48,135,0.3); color: #88AAEE; }
+
+  /* ── STATS SUMMARY ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .stat-card .sc-label { font-size: 0.68rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .stat-card .sc-value { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--gold-light); }
+  .stat-card .sc-sub { font-size: 0.72rem; color: var(--text-light); margin-top: 2px; }
+
+  /* ── STATUS / LOADER ── */
+  .status-msg {
+    text-align: center; padding: 2.5rem 1rem;
+    color: var(--text-light); font-size: 0.88rem;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid rgba(201,168,76,0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: rgba(206,17,38,0.1);
+    border: 1px solid rgba(206,17,38,0.25);
+    border-radius: 8px;
+    padding: 1rem;
+    color: #F08090;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    color: var(--text-light);
+    font-size: 0.75rem;
+    margin-top: 2rem;
+  }
+  footer a { color: var(--gold); text-decoration: none; }
+
+  .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 2rem 0; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="logo">
+    <div class="flag-strip"></div>
+    <div class="logo-text">
+      <h1>Colombia Data Explorer</h1>
+      <p>REST API + SODA · datos.gov.co</p>
+    </div>
+  </div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="showSection('clima')">🌤 Clima</button>
+    <button class="nav-tab" onclick="showSection('soda')">🏛 Datos Gov</button>
+  </nav>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Proyecto de Desarrollo Web · USB</div>
+  <h2>Consultas API en <span>tiempo real</span></h2>
+  <p>Explora datos climáticos de ciudades colombianas vía REST API y datasets oficiales del portal de Datos Abiertos del gobierno colombiano mediante consultas SODA.</p>
+  <div class="api-tags">
+    <span class="api-tag">GET api.open-meteo.com/v1/forecast</span>
+    <span class="api-tag">GET www.datos.gov.co/resource/{id}.json</span>
+    <span class="api-tag">SoQL $where · $limit · $order</span>
+  </div>
+</div>
+
+<!-- SECTION: CLIMA (REST API) -->
+<section id="section-clima" class="section active">
+  <div class="section-label">API REST — Open-Meteo</div>
+  <div class="section-title">Clima en ciudades colombianas</div>
+  <div class="section-desc">Consulta en tiempo real la API pública de Open-Meteo. Sin autenticación requerida. Datos actualizados cada hora con información meteorológica detallada.</div>
+
+  <div class="endpoint-box">
+    <span class="method">GET</span>
+    <span class="url" id="clima-url">https://api.open-meteo.com/v1/forecast?latitude=10.99&longitude=-74.79&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation,weathercode&hourly=temperature_2m&timezone=America%2FBogota</span>
+  </div>
+
+  <div class="city-grid">
+    <button class="city-btn active" onclick="fetchWeather(10.9878,-74.7889,'Barranquilla',this)">
+      <span class="city-emoji">🌴</span>
+      <span class="city-name">Barranquilla</span>
+    </button>
+    <button class="city-btn" onclick="fetchWeather(4.7110,-74.0721,'Bogotá',this)">
+      <span class="city-emoji">🏔</span>
+      <span class="city-name">Bogotá</span>
+    </button>
+    <button class="city-btn" onclick="fetchWeather(6.2442,-75.5812,'Medellín',this)">
+      <span class="city-emoji">🌺</span>
+      <span class="city-name">Medellín</span>
+    </button>
+    <button class="city-btn" onclick="fetchWeather(3.4516,-76.5320,'Cali',this)">
+      <span class="city-emoji">🎭</span>
+      <span class="city-name">Cali</span>
+    </button>
+    <button class="city-btn" onclick="fetchWeather(10.3910,-75.4794,'Cartagena',this)">
+      <span class="city-emoji">🏰</span>
+      <span class="city-name">Cartagena</span>
+    </button>
+    <button class="city-btn" onclick="fetchWeather(1.2136,-77.2811,'Pasto',this)">
+      <span class="city-emoji">🌋</span>
+      <span class="city-name">Pasto</span>
+    </button>
+  </div>
+
+  <div id="weather-container">
+    <div class="status-msg"><div class="spinner"></div>Cargando datos climáticos...</div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="card">
+    <div class="card-title">📡 Sobre esta API</div>
+    <p style="font-size:0.83rem; color:var(--text-light); line-height:1.7;">
+      <strong style="color:#EEF0F8;">Open-Meteo</strong> es una API meteorológica de código abierto sin necesidad de API key. Utiliza modelos numéricos de pronóstico del tiempo de alta resolución como ECMWF e ICON. Los parámetros consultados incluyen temperatura, humedad relativa, velocidad del viento, precipitación y código de condición meteorológica (WMO).
+    </p>
+  </div>
+</section>
+
+<!-- SECTION: SODA / DATOS GOV -->
+<section id="section-soda" class="section">
+  <div class="section-label">API SODA — Portal Datos Abiertos Colombia</div>
+  <div class="section-title">Conjunto de Datos Estratégicos Nacionales</div>
+  <div class="section-desc">
+    Consultas al portal <strong style="color:#EEF0F8;">datos.gov.co</strong> usando la API Socrata Open Data (SODA). Se muestra el catálogo de conjuntos de datos con filtros SoQL: <code style="color:var(--gold-light)">$where</code>, <code style="color:var(--gold-light)">$limit</code>, <code style="color:var(--gold-light)">$order</code>, <code style="color:var(--gold-light)">$q</code>.
+  </div>
+
+  <div class="endpoint-box" id="soda-endpoint-display">
+    <span class="method">GET</span>
+    <span class="url">https://www.datos.gov.co/resource/4t9r-7v7i.json?$limit=20&$order=:updated_at DESC</span>
+  </div>
+
+  <div class="filter-row">
+    <div class="filter-group">
+      <label>Categoría</label>
+      <select id="soda-category">
+        <option value="">Todas</option>
+        <option value="Educación">Educación</option>
+        <option value="Salud y Protección Social">Salud</option>
+        <option value="Transporte">Transporte</option>
+        <option value="Seguridad y Defensa">Seguridad</option>
+        <option value="Ciencia Tecnología e Innovación">Ciencia y Tecnología</option>
+        <option value="Medio Ambiente">Medio Ambiente</option>
+        <option value="Vivienda Ciudad y Territorio">Vivienda</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Búsqueda</label>
+      <input type="text" id="soda-search" placeholder="Ej: COVID, educación..." style="min-width:200px;">
+    </div>
+    <div class="filter-group">
+      <label>Límite</label>
+      <select id="soda-limit" style="min-width:90px;">
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="fetchSodaData()">🔍 Consultar</button>
+  </div>
+
+  <div id="soda-container">
+    <div class="status-msg" style="color:var(--text-light);">Presiona <strong style="color:var(--gold)">Consultar</strong> para cargar datos del portal.</div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="card">
+    <div class="card-title">📖 Sobre SODA y datos.gov.co</div>
+    <p style="font-size:0.83rem; color:var(--text-light); line-height:1.7;">
+      El portal <strong style="color:#EEF0F8;">datos.gov.co</strong> usa la plataforma Socrata, la cual expone todos sus datasets vía la <strong style="color:#EEF0F8;">SODA (Socrata Open Data API)</strong>. Se pueden realizar filtros con <strong style="color:var(--gold-light)">SoQL</strong> (Socrata Query Language), un lenguaje similar a SQL. El identificador del catálogo nacional es <code style="color:var(--gold-light)">4t9r-7v7i</code>. Los parámetros soportados incluyen <code style="color:var(--gold-light)">$select</code>, <code style="color:var(--gold-light)">$where</code>, <code style="color:var(--gold-light)">$order</code>, <code style="color:var(--gold-light)">$limit</code>, <code style="color:var(--gold-light)">$offset</code>, y <code style="color:var(--gold-light)">$q</code> (búsqueda full-text).
+    </p>
+  </div>
+</section>
+
+<footer>
+  <p>Desarrollado con fines académicos · <strong>Universidad Simón Bolívar · IngeBioCaribe</strong></p>
+  <p style="margin-top:4px;">Fuentes: <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · <a href="https://www.datos.gov.co" target="_blank">datos.gov.co (SODA)</a></p>
+</footer>
+
+<script>
+// ─── NAVIGATION ─────────────────────────────────────────────
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  tabs.forEach(t => { if (t.textContent.toLowerCase().includes(name === 'clima' ? 'clima' : 'datos')) t.classList.add('active'); });
+}
+
+// ─── WMO WEATHER CODES ──────────────────────────────────────
+const WMO = {
+  0: ['Cielo despejado', '☀️'],
+  1: ['Mayormente despejado', '🌤'],
+  2: ['Parcialmente nublado', '⛅'],
+  3: ['Nublado', '☁️'],
+  45: ['Niebla', '🌫'],
+  48: ['Niebla con escarcha', '🌫'],
+  51: ['Llovizna leve', '🌦'],
+  61: ['Lluvia leve', '🌧'],
+  63: ['Lluvia moderada', '🌧'],
+  65: ['Lluvia intensa', '⛈'],
+  71: ['Nevada leve', '🌨'],
+  80: ['Lluvias débiles', '🌦'],
+  81: ['Lluvias moderadas', '🌧'],
+  95: ['Tormenta', '⛈'],
+  99: ['Tormenta con granizo', '⛈'],
+};
+function getWMO(code) { return WMO[code] || ['Condición desconocida', '🌡']; }
+
+// ─── WIND DIRECTION ─────────────────────────────────────────
+function windDir(deg) {
+  const dirs = ['N','NE','E','SE','S','SO','O','NO'];
+  return dirs[Math.round(deg / 45) % 8];
+}
+
+// ─── FETCH CLIMA (REST API) ──────────────────────────────────
+let weatherChart = null;
+async function fetchWeather(lat, lon, cityName, btn) {
+  document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation,weathercode,apparent_temperature,surface_pressure&hourly=temperature_2m,precipitation_probability&timezone=America%2FBogota&forecast_days=1`;
+  document.getElementById('clima-url').textContent = url;
+
+  const container = document.getElementById('weather-container');
+  container.innerHTML = `<div class="status-msg"><div class="spinner"></div>Consultando Open-Meteo para ${cityName}...</div>`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    renderWeather(data, cityName);
+  } catch (err) {
+    container.innerHTML = `<div class="error-msg">❌ Error al conectar con la API: ${err.message}. Verifica tu conexión a internet.</div>`;
+  }
+}
+
+function renderWeather(data, cityName) {
+  const c = data.current;
+  const h = data.hourly;
+  const [desc, icon] = getWMO(c.weathercode);
+
+  // Build hourly chart data (next 12 hours)
+  const hours = h.time.slice(0, 12).map(t => t.split('T')[1]);
+  const temps = h.temperature_2m.slice(0, 12);
+  const precip = h.precipitation_probability.slice(0, 12);
+
+  const container = document.getElementById('weather-container');
+  container.innerHTML = `
+    <div class="weather-display">
+      <div class="weather-main">
+        <div class="weather-icon">${icon}</div>
+        <div class="weather-city">${cityName}</div>
+        <div class="weather-temp">${Math.round(c.temperature_2m)}<span>°C</span></div>
+        <div class="weather-desc">${desc}</div>
+        <div style="font-size:0.75rem; color:var(--text-light); margin-top:8px;">Sensación térmica: ${Math.round(c.apparent_temperature)}°C</div>
+      </div>
+      <div class="weather-stats">
+        <div class="stat-tile">
+          <div class="label">💧 Humedad</div>
+          <div class="value">${c.relative_humidity_2m}<span class="unit">%</span></div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">💨 Viento</div>
+          <div class="value">${Math.round(c.wind_speed_10m)}<span class="unit"> km/h ${windDir(c.wind_direction_10m)}</span></div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">🌧 Precipit.</div>
+          <div class="value">${c.precipitation}<span class="unit"> mm</span></div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">🔵 Presión</div>
+          <div class="value">${Math.round(c.surface_pressure)}<span class="unit"> hPa</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📈 Pronóstico por hora — próximas 12 horas</div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:#C9A84C;"></span>Temperatura (°C)</span>
+        <span><span class="legend-dot" style="background:#5B8FD4; border-radius:2px;"></span>Prob. lluvia (%)</span>
+      </div>
+      <div class="chart-wrap"><canvas id="hourlyChart" role="img" aria-label="Gráfico de temperatura y probabilidad de lluvia por hora en ${cityName}">Temperatura y probabilidad de precipitación en las próximas 12 horas.</canvas></div>
+    </div>
+  `;
+
+  if (weatherChart) { weatherChart.destroy(); weatherChart = null; }
+
+  const ctx = document.getElementById('hourlyChart').getContext('2d');
+  weatherChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hours,
+      datasets: [
+        {
+          label: 'Temperatura °C',
+          data: temps,
+          borderColor: '#C9A84C',
+          backgroundColor: 'rgba(201,168,76,0.1)',
+          tension: 0.4,
+          fill: true,
+          yAxisID: 'y',
+          pointRadius: 3,
+          pointBackgroundColor: '#C9A84C',
+        },
+        {
+          label: 'Prob. lluvia %',
+          data: precip,
+          borderColor: '#5B8FD4',
+          backgroundColor: 'rgba(91,143,212,0.08)',
+          tension: 0.4,
+          fill: true,
+          yAxisID: 'y1',
+          pointRadius: 3,
+          borderDash: [4, 3],
+          pointBackgroundColor: '#5B8FD4',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8888AA', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: {
+          position: 'left',
+          ticks: { color: '#C9A84C', font: { size: 11 }, callback: v => v + '°' },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        y1: {
+          position: 'right',
+          min: 0, max: 100,
+          ticks: { color: '#5B8FD4', font: { size: 11 }, callback: v => v + '%' },
+          grid: { drawOnChartArea: false },
+        }
+      }
+    }
+  });
+}
+
+// ─── FETCH SODA ──────────────────────────────────────────────
+async function fetchSodaData() {
+  const category = document.getElementById('soda-category').value;
+  const search   = document.getElementById('soda-search').value.trim();
+  const limit    = document.getElementById('soda-limit').value;
+
+  let url = `https://www.datos.gov.co/resource/4t9r-7v7i.json?$limit=${limit}&$order=:updated_at DESC`;
+
+  const conditions = [];
+  if (category) conditions.push(`categoria="${category}"`);
+  if (conditions.length) url += `&$where=${encodeURIComponent(conditions.join(' AND '))}`;
+  if (search) url += `&$q=${encodeURIComponent(search)}`;
+
+  document.getElementById('soda-endpoint-display').innerHTML =
+    `<span class="method">GET</span><span class="url">${url}</span>`;
+
+  const container = document.getElementById('soda-container');
+  container.innerHTML = `<div class="status-msg"><div class="spinner"></div>Consultando datos.gov.co via SODA...</div>`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'X-App-Token': '' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    const data = await res.json();
+    renderSodaData(data, limit);
+  } catch (err) {
+    container.innerHTML = `<div class="error-msg">❌ Error en consulta SODA: ${err.message}</div>
+      <p style="font-size:0.8rem; color:var(--text-light); margin-top:0.5rem;">Puede ocurrir por CORS al ejecutar localmente. Intenta abrir desde un servidor local o usa la URL directamente en el navegador.</p>`;
+    renderMockData(limit);
+  }
+}
+
+function renderSodaData(data, limit) {
+  if (!data.length) {
+    document.getElementById('soda-container').innerHTML =
+      `<div class="status-msg">No se encontraron resultados para los filtros aplicados.</div>`;
+    return;
+  }
+
+  const cats = {};
+  data.forEach(d => { const c = d.categoria || 'Sin categoría'; cats[c] = (cats[c] || 0) + 1; });
+  const totalSets = data.length;
+  const conUrl = data.filter(d => d.url).length;
+
+  let html = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="sc-label">Total datasets</div>
+        <div class="sc-value">${totalSets}</div>
+        <div class="sc-sub">de ${limit} solicitados</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Con URL pública</div>
+        <div class="sc-value">${conUrl}</div>
+        <div class="sc-sub">recursos accesibles</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Categorías únicas</div>
+        <div class="sc-value">${Object.keys(cats).length}</div>
+        <div class="sc-sub">tipos de datos</div>
+      </div>
+    </div>
+
+    <div class="data-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Título</th>
+            <th>Categoría</th>
+            <th>Entidad</th>
+            <th>Actualizado</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  data.forEach((d, i) => {
+    const updated = d[':updated_at'] ? new Date(d[':updated_at']).toLocaleDateString('es-CO') : '—';
+    const cat = d.categoria || 'Sin categoría';
+    const entity = d.nombre_de_la_entidad || d.nombre_entidad || '—';
+    const status = d.etapa_de_publicacion || d.estado || 'Publicado';
+    const title = d.titulo || d.nombre || 'Sin título';
+
+    let badgeClass = 'badge-blue';
+    if (status.toLowerCase().includes('aprobad') || status.toLowerCase().includes('public')) badgeClass = 'badge-green';
+    else if (status.toLowerCase().includes('proceso')) badgeClass = 'badge-yellow';
+    else if (status.toLowerCase().includes('rechaz')) badgeClass = 'badge-red';
+
+    const titleDisplay = d.url
+      ? `<a href="${d.url}" target="_blank" style="color:var(--gold-light); text-decoration:none;">${title.substring(0,60)}${title.length>60?'…':''}</a>`
+      : `<span>${title.substring(0,60)}${title.length>60?'…':''}</span>`;
+
+    html += `
+      <tr>
+        <td style="color:var(--text-light);">${i+1}</td>
+        <td>${titleDisplay}</td>
+        <td><span class="badge badge-blue">${cat.substring(0,25)}</span></td>
+        <td style="font-size:0.75rem;">${entity.substring(0,40)}</td>
+        <td style="color:var(--text-light); font-size:0.75rem;">${updated}</td>
+        <td><span class="badge ${badgeClass}">${status.substring(0,15)}</span></td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table></div>`;
+
+  // Mini bar chart by category
+  if (Object.keys(cats).length > 1) {
+    html += `
+      <div class="card" style="margin-top:1.5rem;">
+        <div class="card-title">📊 Distribución por categoría</div>
+        <div style="position:relative; width:100%; height:${Math.max(200, Object.keys(cats).length * 38)}px;">
+          <canvas id="catChart" role="img" aria-label="Gráfico de barras con la distribución de datasets por categoría">Distribución de ${totalSets} datasets por categoría.</canvas>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById('soda-container').innerHTML = html;
+
+  if (Object.keys(cats).length > 1) {
+    const sorted = Object.entries(cats).sort((a,b) => b[1]-a[1]).slice(0,8);
+    new Chart(document.getElementById('catChart'), {
+      type: 'bar',
+      data: {
+        labels: sorted.map(([k]) => k.length > 22 ? k.substring(0,22)+'…' : k),
+        datasets: [{
+          label: 'Datasets',
+          data: sorted.map(([,v]) => v),
+          backgroundColor: '#C9A84C',
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#8888AA', font: { size: 11 }, stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { ticks: { color: '#C8CAD8', font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+}
+
+function renderMockData(limit) {
+  const mockRows = [
+    { titulo: 'Establecimientos educativos por municipio', categoria: 'Educación', entidad: 'Ministerio de Educación Nacional', updated: '2024-03-15', estado: 'Aprobado' },
+    { titulo: 'Cobertura de vacunación PAI 2023', categoria: 'Salud y Protección Social', entidad: 'Ministerio de Salud', updated: '2024-02-20', estado: 'Aprobado' },
+    { titulo: 'Accidentalidad vial nacional histórica', categoria: 'Transporte', entidad: 'Ministerio de Transporte', updated: '2024-01-10', estado: 'Aprobado' },
+    { titulo: 'Grupos de investigación registrados Colciencias', categoria: 'Ciencia Tecnología e Innovación', entidad: 'Minciencias', updated: '2024-03-01', estado: 'Aprobado' },
+    { titulo: 'Hurtos por departamento 2023', categoria: 'Seguridad y Defensa', entidad: 'Policía Nacional - DIJIN', updated: '2024-02-05', estado: 'Aprobado' },
+    { titulo: 'Índice de calidad del agua por cuenca', categoria: 'Medio Ambiente', entidad: 'IDEAM', updated: '2023-12-18', estado: 'En proceso' },
+    { titulo: 'Subsidios de vivienda otorgados', categoria: 'Vivienda Ciudad y Territorio', entidad: 'Ministerio de Vivienda', updated: '2024-01-25', estado: 'Aprobado' },
+    { titulo: 'Empresas activas Cámara de Comercio', categoria: 'Comercio Industria y Turismo', entidad: 'Confecámaras', updated: '2024-03-10', estado: 'Aprobado' },
+  ].slice(0, parseInt(limit));
+
+  const container = document.getElementById('soda-container');
+  container.innerHTML = `
+    <div class="error-msg" style="margin-bottom:1rem;">⚠️ Datos de ejemplo (CORS bloqueó la petición desde archivo local). En producción o servidor, la API retorna datos reales.</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="sc-label">Registros (demo)</div><div class="sc-value">${mockRows.length}</div><div class="sc-sub">datos de ejemplo</div></div>
+      <div class="stat-card"><div class="sc-label">Endpoint real</div><div class="sc-value" style="font-size:0.85rem; font-family:monospace; color:var(--gold-light);">4t9r-7v7i</div><div class="sc-sub">catálogo nacional</div></div>
+    </div>
+    <div class="data-table-wrap"><table><thead><tr><th>#</th><th>Título del dataset</th><th>Categoría</th><th>Entidad publicadora</th><th>Actualización</th><th>Estado</th></tr></thead><tbody>
+    ${mockRows.map((r,i) => `<tr>
+      <td style="color:var(--text-light);">${i+1}</td>
+      <td style="color:#EEF0F8;">${r.titulo}</td>
+      <td><span class="badge badge-blue">${r.categoria.substring(0,20)}</span></td>
+      <td style="font-size:0.75rem; color:var(--text-light);">${r.entidad}</td>
+      <td style="font-size:0.75rem; color:var(--text-light);">${r.updated}</td>
+      <td><span class="badge badge-green">${r.estado}</span></td>
+    </tr>`).join('')}
+    </tbody></table></div>
+  `;
+}
+
+// ─── AUTO-LOAD CLIMA ─────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const bqBtn = document.querySelector('.city-btn.active');
+  fetchWeather(10.9878, -74.7889, 'Barranquilla', bqBtn);
+});
+</script>
+</body>
+</html>
